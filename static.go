@@ -101,7 +101,7 @@ func cleanPages(p map[string]Page, prefix string) map[string]Page {
 		k = strings.Replace(k, "index", "", -1)
 		cp[k] = v
 		fmt.Println(k)
-		fmt.Println(v.Path)
+		//fmt.Println(v.Path)
 	}
 
 	return cp
