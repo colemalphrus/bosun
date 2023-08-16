@@ -1,4 +1,4 @@
-package bosun
+package render
 
 import (
 	"fmt"

@@ -1,4 +1,4 @@
-package bosun
+package mux
 
 import (
 	"net/http"
