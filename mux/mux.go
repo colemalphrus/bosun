@@ -7,39 +7,44 @@ import (
 	"strings"
 )
 
+type HandlerFunc func(http.ResponseWriter, *http.Request, Context)
+type Context map[string]string
+
 type route struct {
 	methods []string
 	regex   *regexp.Regexp
 	params  map[int]string
-	handler http.HandlerFunc
+	handler HandlerFunc
 }
 
 type RouteMux struct {
 	routes     []*route
-	middleware []http.HandlerFunc
+	middleware []HandlerFunc
 }
 
 func New() *RouteMux {
 	return &RouteMux{}
 }
 
-func (m *RouteMux) HandleFunc(pattern string, handler http.HandlerFunc) *route {
+func (m *RouteMux) HandleFunc(pattern string, handler HandlerFunc) *route {
 	return m.AddRoute(pattern, handler)
 }
 
 func (m *RouteMux) Handle(pattern string, handler http.Handler) *route {
-	return m.AddRoute(pattern, handler.ServeHTTP)
+	return m.AddRoute(pattern, func(w http.ResponseWriter, r *http.Request, m Context) {
+		handler.ServeHTTP(w, r)
+	})
 }
 
 func (r *route) Methods(methods ...string) {
 	r.methods = methods
 }
 
-func (m *RouteMux) Middleware(filter http.HandlerFunc) {
+func (m *RouteMux) Middleware(filter HandlerFunc) {
 	m.middleware = append(m.middleware, filter)
 }
 
-func (m *RouteMux) AddRoute(pattern string, handler http.HandlerFunc) *route {
+func (m *RouteMux) AddRoute(pattern string, handler HandlerFunc) *route {
 
 	//split the url into sections
 	parts := strings.Split(pattern, "/")
@@ -105,11 +110,11 @@ func (m *RouteMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		//execute middleware
 		for _, filter := range m.middleware {
-			filter(w, r)
+			filter(w, r, map[string]string{})
 		}
 
 		//Invoke the request handler
-		route.handler(w, r)
+		route.handler(w, r, map[string]string{})
 		break
 	}
 }

@@ -2,6 +2,7 @@ package render
 
 import (
 	"fmt"
+	"github.com/colemalphrus/bosun/mux"
 	"github.com/hoisie/mustache"
 	"net/http"
 	"os"
@@ -44,7 +45,7 @@ func NewComponentConfig() ComponentConfig {
 
 // Opinionated component server
 
-func (c *ComponentConfig) ServeComponents(w http.ResponseWriter, r *http.Request) {
+func (c *ComponentConfig) ServeComponents(w http.ResponseWriter, r *http.Request, ctx mux.Context) {
 	componentID := r.URL.Query().Get("id")
 	component, err := c.COMPONENTS[componentID].Build(w, r)
 	if err != nil {

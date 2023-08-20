@@ -2,6 +2,7 @@ package render
 
 import (
 	"fmt"
+	"github.com/colemalphrus/bosun/mux"
 	"log"
 	"net/http"
 	"net/url"
@@ -40,8 +41,8 @@ func ServeStatic(prefix string, dir string) http.Handler {
 
 // custom page server
 
-func ServePages(p map[string]Page) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func ServePages(p map[string]Page) mux.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request, ctx mux.Context) {
 		urlPath := r.URL.Path
 		if len(r.URL.Path) > 2 {
 			urlPath = strings.TrimSuffix(urlPath, "/")

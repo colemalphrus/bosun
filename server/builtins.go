@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"github.com/colemalphrus/bosun/mux"
 	"github.com/colemalphrus/bosun/render"
 	"net/http"
 )
@@ -33,8 +34,9 @@ func (c *Config) staticSetup() {
 }
 
 func (c *Config) livenessSetup() {
-	//c.Multiplexer.Handle(c.StaticRoot, render.ServeStatic(c.StaticRoot, c.StaticDir))
-	c.Multiplexer.HandleFunc("/liveness", func(writer http.ResponseWriter, request *http.Request) {
-		writer.Write([]byte("200::OK"))
-	})
+	c.Multiplexer.HandleFunc("/liveness", Liveness)
+}
+
+func Liveness(w http.ResponseWriter, r *http.Request, ctx mux.Context) {
+	w.Write([]byte("200::OK"))
 }
