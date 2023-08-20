@@ -2,44 +2,55 @@ package mux
 
 import (
 	"net/http"
-	"net/url"
 	"regexp"
 	"strings"
 )
+
+type HandlerFunc func(http.ResponseWriter, *http.Request, Context)
+
+//type Context map[string]string
+
+type Context struct {
+	PathParams map[string]string
+	MWData     map[string]string
+	MWErrors   []error
+}
 
 type route struct {
 	methods []string
 	regex   *regexp.Regexp
 	params  map[int]string
-	handler http.HandlerFunc
+	handler HandlerFunc
 }
 
 type RouteMux struct {
 	routes     []*route
-	middleware []http.HandlerFunc
+	middleware []HandlerFunc
 }
 
 func New() *RouteMux {
 	return &RouteMux{}
 }
 
-func (m *RouteMux) HandleFunc(pattern string, handler http.HandlerFunc) *route {
+func (m *RouteMux) HandleFunc(pattern string, handler HandlerFunc) *route {
 	return m.AddRoute(pattern, handler)
 }
 
 func (m *RouteMux) Handle(pattern string, handler http.Handler) *route {
-	return m.AddRoute(pattern, handler.ServeHTTP)
+	return m.AddRoute(pattern, func(w http.ResponseWriter, r *http.Request, m Context) {
+		handler.ServeHTTP(w, r)
+	})
 }
 
 func (r *route) Methods(methods ...string) {
 	r.methods = methods
 }
 
-func (m *RouteMux) Middleware(filter http.HandlerFunc) {
+func (m *RouteMux) Middleware(filter HandlerFunc) {
 	m.middleware = append(m.middleware, filter)
 }
 
-func (m *RouteMux) AddRoute(pattern string, handler http.HandlerFunc) *route {
+func (m *RouteMux) AddRoute(pattern string, handler HandlerFunc) *route {
 
 	//split the url into sections
 	parts := strings.Split(pattern, "/")
@@ -79,6 +90,11 @@ func (m *RouteMux) AddRoute(pattern string, handler http.HandlerFunc) *route {
 func (m *RouteMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	requestPath := r.URL.Path
+	context := Context{
+		PathParams: make(map[string]string),
+		MWData:     make(map[string]string),
+		MWErrors:   nil,
+	}
 
 	//find a matching Route
 	for _, route := range m.routes {
@@ -95,21 +111,18 @@ func (m *RouteMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		matches := route.regex.FindStringSubmatch(requestPath)
 
 		if len(route.params) > 0 {
-			values := r.URL.Query()
 			for i, match := range matches[1:] {
-				values.Add(route.params[i], match)
+				context.PathParams[route.params[i]] = match
 			}
-
-			r.URL.RawQuery = url.Values(values).Encode()
 		}
 
 		//execute middleware
 		for _, filter := range m.middleware {
-			filter(w, r)
+			filter(w, r, context)
 		}
 
 		//Invoke the request handler
-		route.handler(w, r)
+		route.handler(w, r, context)
 		break
 	}
 }
