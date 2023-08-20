@@ -2,13 +2,19 @@ package mux
 
 import (
 	"net/http"
-	"net/url"
 	"regexp"
 	"strings"
 )
 
 type HandlerFunc func(http.ResponseWriter, *http.Request, Context)
-type Context map[string]string
+
+//type Context map[string]string
+
+type Context struct {
+	PathParams map[string]string
+	MWData     map[string]string
+	MWErrors   []error
+}
 
 type route struct {
 	methods []string
@@ -84,6 +90,11 @@ func (m *RouteMux) AddRoute(pattern string, handler HandlerFunc) *route {
 func (m *RouteMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	requestPath := r.URL.Path
+	context := Context{
+		PathParams: make(map[string]string),
+		MWData:     make(map[string]string),
+		MWErrors:   nil,
+	}
 
 	//find a matching Route
 	for _, route := range m.routes {
@@ -100,21 +111,18 @@ func (m *RouteMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		matches := route.regex.FindStringSubmatch(requestPath)
 
 		if len(route.params) > 0 {
-			values := r.URL.Query()
 			for i, match := range matches[1:] {
-				values.Add(route.params[i], match)
+				context.PathParams[route.params[i]] = match
 			}
-
-			r.URL.RawQuery = url.Values(values).Encode()
 		}
 
 		//execute middleware
 		for _, filter := range m.middleware {
-			filter(w, r, map[string]string{})
+			filter(w, r, context)
 		}
 
 		//Invoke the request handler
-		route.handler(w, r, map[string]string{})
+		route.handler(w, r, context)
 		break
 	}
 }

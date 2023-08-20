@@ -46,7 +46,7 @@ func NewComponentConfig() ComponentConfig {
 // Opinionated component server
 
 func (c *ComponentConfig) ServeComponents(w http.ResponseWriter, r *http.Request, ctx mux.Context) {
-	componentID := r.URL.Query().Get("id")
+	componentID := ctx.PathParams["id"]
 	component, err := c.COMPONENTS[componentID].Build(w, r)
 	if err != nil {
 		return
